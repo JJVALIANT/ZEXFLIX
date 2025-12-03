@@ -53,8 +53,8 @@ def load_data():
         gc = gspread.service_account_from_dict(creds_json)
         
         # Abre la hoja de cálculo por URL (asegúrate de que la URL y el nombre de la hoja sean correctos)
-        # Reemplaza la URL_DE_TU_HOJA con la URL real de tu Google Sheet
-        spreadsheet_url = st.secrets.get("spreadsheet_url", "https://docs.google.com/spreadsheets/d/1BsdM43N3T45D1H45M46F3P28P141F9192M43C12L4/edit#gid=0")
+        # 🟢 MODIFICACIÓN: Se inserta el ID proporcionado por el usuario.
+        spreadsheet_url = st.secrets.get("spreadsheet_url", "https://docs.google.com/spreadsheets/d/1d4OatU_u7Obj_BKW4vGov6gIZzivl4N3KsIqUua19Jc/edit#gid=0")
         
         # Intenta abrir el libro
         sh = gc.open_by_url(spreadsheet_url)
@@ -82,6 +82,9 @@ def load_data():
             st.error("Error al cargar datos. Error: Módulo 'gspread' obsoleto. Por favor, actualiza la librería en 'requirements.txt' a gspread>=5.0.0.")
         elif "worksheet 'data'" in str(e):
             st.error("Error al cargar datos. Error: No se encontró la hoja de cálculo llamada 'data'.")
+        # ⚠️ Mensaje clave para el error 404/403: Se recuerda al usuario el permiso.
+        elif "<Response [404]>" in str(e) or "<Response [403]>" in str(e):
+            st.error("Error de acceso a la hoja de cálculo. Por favor, asegúrate de que la hoja esté compartida como 'Editor' o 'Lector' con la cuenta de servicio de Google Cloud (el email dentro de tu JSON de credenciales).")
         else:
             st.error(f"Error desconocido al cargar datos. Asegúrate que la hoja de cálculo esté compartida con la cuenta de servicio. Detalles: {e}")
         return pd.DataFrame()
