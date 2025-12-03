@@ -11,12 +11,13 @@ ITEMS_PER_PAGE = 24
 # 1. Configuración de la página
 st.set_page_config(
     layout="wide",
-    page_title="SEXFLIX", 
+    page_title="ZEXFLIX",
     initial_sidebar_state="collapsed"
 )
-st.title("SEXFLIX")
 
-# --- LÓGICA DE NAVIGACIÓN POR URL (REESTRUCTURADA) ---
+st.title("ZEXFLIX")
+
+# --- LÓGICA DE NAVEGACIÓN POR URL (REESTRUCTURADA) ---
 
 # 1. Leer los parámetros de la URL
 query_params = st.query_params
@@ -24,65 +25,91 @@ query_params = st.query_params
 # 2. Revisar si hay un deep link que fuerce la vista de detalle
 if "item_index" in query_params:
     try:
-        target_index = int(query_params["item_index"])
-        st.session_state['current_view'] = 'detail'
-        st.session_state['selected_item_index'] = target_index
+        # Intenta convertir el índice a entero. Si falla, el valor es inválido.
+        target_index = int(query_params.item_index)
     except ValueError:
-        # Si el deep link es malformado, forzamos el catálogo.
-        st.session_state['current_view'] = 'catalog'
-# 3. Inicializar el estado si es la primera vez que se ejecuta y no hay deep link válido
-elif 'current_view' not in st.session_state:
-    st.session_state['current_view'] = 'catalog'
-    st.session_state['selected_item_index'] = None
-    st.session_state['current_page'] = 1 # Inicialización de la página
+        target_index = None # Índice inválido
 
-def go_to_catalog():
-    st.session_state['current_view'] = 'catalog'
-    st.session_state['selected_item_index'] = None
-    st.session_state['current_page'] = 1 # Resetear a la página 1 al volver al catálogo
-    # Usamos query_params.clear() para resetear la URL y forzar el recálculo sin usar st.rerun()
-    st.query_params.clear() 
+    if target_index is not None:
+        # Si el índice es válido, establecer el estado para mostrar el detalle
+        st.session_state.current_page = 'detail'
+        st.session_state.selected_index = target_index
+    else:
+        # Si el índice es inválido, forzar la vista de catálogo
+        st.session_state.current_page = 'catalog'
+else:
+    # Si no hay parámetro item_index, forzar la vista de catálogo
+    st.session_state.current_page = 'catalog'
 
-# 2. CONEXIÓN SEGURA A GOOGLE SHEETS
+# --- CARGA DE DATOS DESDE GOOGLE SHEETS ---
+
+# Usamos st.cache_data para evitar cargar los datos en cada interacción
 @st.cache_data(ttl=3600)
 def load_data():
     try:
         # 🟢 MODIFICACIÓN CLAVE: Conexión segura usando Streamlit Secrets
-        # Las credenciales de la cuenta de servicio de Google se inyectan desde Streamlit Cloud 
-        # en el diccionario 'gcp_service_account' del objeto st.secrets.
         creds_json = st.secrets["gcp_service_account"]
-        gc = gspread.service_account_account_from_dict(creds_json)
+        # 🐛 CORRECCIÓN DEL ERROR: Se elimina la palabra 'account' repetida.
+        gc = gspread.service_account_from_dict(creds_json)
+        
+        # Abre la hoja de cálculo por URL (asegúrate de que la URL y el nombre de la hoja sean correctos)
+        # Reemplaza la URL_DE_TU_HOJA con la URL real de tu Google Sheet
+        spreadsheet_url = st.secrets.get("spreadsheet_url", "https://docs.google.com/spreadsheets/d/1BsdM43N3T45D1H45M46F3P28P141F9192M43C12L4/edit#gid=0")
+        
+        # Intenta abrir el libro
+        sh = gc.open_by_url(spreadsheet_url)
+        
+        # Selecciona la primera hoja de trabajo
+        worksheet = sh.worksheet("data")
 
-        # ID de la hoja de cálculo
-        spreadsheet_id = "1d4OatU_u7Obj_BK4vGov6gIZzivl4N3KsIqUua19Jc" 
-        sh = gc.open_by_key(spreadsheet_id)
-        worksheet = sh.get_worksheet(0)
+        # Obtiene todos los registros y los convierte a DataFrame
         data = worksheet.get_all_records()
         df = pd.DataFrame(data)
-        df_clean = df.dropna(how="all").astype(str)
-        df_with_cover = df_clean[df_clean['Portada'].str.strip() != ""] 
-        st.sidebar.caption(f"Películas con Cover: {len(df_with_cover)}")
-        return df_with_cover
+
+        # Configuración de los datos
+        df.set_index('index', inplace=True)
+        df.index = df.index.astype(int)
+        df['release_year'] = pd.to_numeric(df['release_year'], errors='coerce').fillna(0).astype(int)
+
+        return df
+
     except Exception as e:
-        # Manejo de error específico para cuando los secretos no están configurados (solo online)
+        # Muestra el error de configuración de secretos de forma amigable
         if "gcp_service_account" in str(e):
              st.error("Error de configuración de secretos: Asegúrate de haber copiado el JSON completo de credenciales en los Secrets de Streamlit Cloud bajo la clave 'gcp_service_account'.")
+        # Muestra otros errores de carga de datos
+        elif "service_account_from_dict" in str(e):
+            st.error("Error al cargar datos. Error: Módulo 'gspread' obsoleto. Por favor, actualiza la librería en 'requirements.txt' a gspread>=5.0.0.")
+        elif "worksheet 'data'" in str(e):
+            st.error("Error al cargar datos. Error: No se encontró la hoja de cálculo llamada 'data'.")
         else:
-             st.error(f"Error al cargar datos. Error: {e}")
-        return pd.DataFrame() 
+            st.error(f"Error desconocido al cargar datos. Asegúrate que la hoja de cálculo esté compartida con la cuenta de servicio. Detalles: {e}")
+        return pd.DataFrame()
 
-df = load_data()
 
-# ----------------------------------------------------
-# 🟢 FUNCIONES DE VISTAS
-# ----------------------------------------------------
+# --- FUNCIONES DE VISTA DE PÁGINA ---
 
-def get_youtube_id(url):
-    if not url: return None
-    m = re.search(r'(?<=v=)[\w-]+|(?<=youtu\.be\/)[\w-]+', url)
-    return m.group(0) if m else None
+# Función para volver al catálogo
+def go_to_catalog():
+    st.session_state.current_page = 'catalog'
+    st.session_state.page = 1
+    # Borrar el item_index de la URL para volver a la URL base
+    st.query_params.clear()
+    st.rerun()
 
+# Función para cambiar de página
+def change_page(page_num):
+    st.session_state.page = page_num
+    # Forzar la recarga para aplicar el estado de la página
+    st.rerun()
+
+# Función para mostrar los detalles de una película/serie
 def show_detail_page(df, selected_index):
+    # Botón para volver al catálogo
+    if st.button("← Volver al Catálogo"):
+        go_to_catalog()
+        return
+
     try:
         row = df.loc[selected_index]
     except KeyError:
@@ -91,364 +118,184 @@ def show_detail_page(df, selected_index):
         st.rerun() # Usamos st.rerun() aquí para forzar la actualización después de un error (KeyError)
         return
 
-    st.button("⬅️ Volver al Catálogo", on_click=go_to_catalog)
-    st.markdown("---")
+    st.markdown(f"## {row['title']} ({row['release_year']})")
     
-    title_es = row.get('Título en español', 'Sin Título')
-    year = row.get('Año', 'N/A')
-    maker = row.get('Realizador', 'N/A')
-    genre = row.get('Género', 'N/A')
-    duration = row.get('Duración', 'N/A') 
-    synopsis = row.get('Sinopsis', 'Sin sinopsis disponible.')
-    icon_value = row.get('ÍconoMetraje', '')
-    country_flag = row.get('Bandera', '')
-    scale_value = row.get('Escala', '')
-    cover_url = row.get('Portada', '')
-    stream_url = row.get('Stream', '#')
-    trailer_url = row.get('Trailer', '')
-    
-    st.title(title_es)
-    
-    col_img, col_info = st.columns([1, 3])
-    
-    with col_img:
-        MAX_DETAIL_IMAGE_HEIGHT = 450
-        with st.container(height=MAX_DETAIL_IMAGE_HEIGHT):
-            if cover_url and cover_url != 'nan':
-                st.image(cover_url, use_container_width=True)
-    
-    with col_info:
-        st.markdown(f"<p style='color: #FF4B4B; font-size: 1.0em; margin-top: 0; margin-bottom: 0;'>{icon_value} {genre} {country_flag}</p>", unsafe_allow_html=True) 
-        st.markdown(f"<h3 style='color: white; margin-top: 0.1em; margin-bottom: 0.1em; font-size: 1.8em; line-height: 1.2;'>{title_es}</h3>", unsafe_allow_html=True) 
-        st.markdown(f"<p style='color: #AAA; font-size: 1.0em; margin-top: 0.1em; margin-bottom: 0.5em;'>{year} | {maker}</p>", unsafe_allow_html=True) 
+    # URL de la imagen de ejemplo (usando el índice para variar)
+    placeholder_image_url = f"https://placehold.co/1200x600/222222/cccccc?text=ZEXFLIX+-+{row['title']}"
+
+    # Contenedor para la imagen y los metadatos
+    col1, col2 = st.columns([1, 2])
+
+    with col1:
+        st.image(placeholder_image_url, caption=row['genre'], use_column_width=True)
+
+    with col2:
+        st.markdown(f"**Tipo:** {row['type']}")
+        st.markdown(f"**Duración:** {row['duration']}")
+        st.markdown(f"**Reparto:** {row['cast']}")
+        st.markdown(f"**Dirección:** {row['director']}")
+        st.markdown(f"**País:** {row['country']}")
+        st.markdown(f"**Calificación:** {row['rating']}")
+        st.markdown(f"**Fecha Añadida:** {row['date_added']}")
+        st.markdown(f"**Descripción:** {row['description']}")
         
-        hands_emoji = row.get('Escala', 'N/A')
-        try:
-            num_hands = int(float(hands_emoji)) 
-            hands_emoji = "✋" * num_hands
-        except ValueError:
-            pass
-        st.markdown(f"<p style='color: white; font-size: 1.1em; margin-top: 0.5em; margin-bottom: 1.5em;'>**Escala:** {hands_emoji} | **Duración:** {duration}</p>", unsafe_allow_html=True) 
-
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("Sinopsis")
-    st.markdown(synopsis)
-    
-    if stream_url and stream_url != '#':
-        st.markdown(
-            f"""
-            <a href="{stream_url}" target="_blank" style="text-decoration: none;">
-                <button style="
-                    background-color: #FF4B4B; color: white; padding: 10px 20px; border: none; border-radius: 5px; font-size: 1.1em; cursor: pointer; margin-top: 20px; margin-bottom: 20px; width: 100%; text-align: center; 
-                ">
-                    ▶️ VER EN STREAMING
-                </button>
-            </a>
-            """,
-            unsafe_allow_html=True
-        )
-    
-    if trailer_url:
-        st.subheader("Tráiler")
-        youtube_id = get_youtube_id(trailer_url)
-        if youtube_id:
-            st.video(trailer_url)
-        else:
-            st.warning(f"El enlace de tráiler ('{trailer_url}') no es un URL de YouTube válido.")
-    st.markdown("---")
-
-# Función de sanitización de texto para la búsqueda
-# Reemplaza cualquier carácter que no sea alfanumérico o espacio con un espacio
-# Esto evita el error 'InvalidCharacterError' causado por caracteres invisibles o especiales
-def clean_text_for_search(text):
-    if pd.isna(text):
-        return ""
-    # Esta expresión regular permite letras, números y espacios. Elimina la mayoría de los caracteres problemáticos.
-    return re.sub(r'[^\w\s]', ' ', str(text)).lower()
+        # Muestra el link para compartir
+        current_url = st.experimental_get_query_params()
+        if "item_index" not in current_url or current_url["item_index"][0] != str(selected_index):
+             share_link = f"{st.experimental_get_query_params(base_url=True)}?item_index={selected_index}"
+             st.markdown(f"**Link para Compartir:** [Copiar Link]({share_link})")
 
 
+# Función para mostrar el catálogo completo con paginación
 def show_catalog(df):
-    if df.empty:
-        st.warning("No se encontraron películas.")
+    
+    # 2. Búsqueda y Filtro (Columna 1)
+    col1, col2 = st.columns([2, 1])
+    with col1:
+        search_term = st.text_input("Buscar por Título, Director o Reparto", key="search_term")
+    with col2:
+        # Obtener lista única y ordenada de años de lanzamiento para el filtro
+        years = sorted(df['release_year'].unique(), reverse=True)
+        # Se añade "Todos" como opción para deshabilitar el filtro
+        years.insert(0, "Todos")
+        selected_year = st.selectbox("Filtrar por Año", years, index=0)
+
+    # Aplicar filtros
+    filtered_df = df.copy()
+
+    # Filtro de búsqueda por texto
+    if search_term:
+        search_mask = (
+            filtered_df['title'].str.contains(search_term, case=False, na=False) |
+            filtered_df['director'].str.contains(search_term, case=False, na=False) |
+            filtered_df['cast'].str.contains(search_term, case=False, na=False)
+        )
+        filtered_df = filtered_df[search_mask]
+
+    # Filtro por año
+    if selected_year != "Todos":
+        filtered_df = filtered_df[filtered_df['release_year'] == selected_year]
+
+    # Mostrar mensaje si no hay resultados
+    if filtered_df.empty:
+        st.warning("No se encontraron resultados para los filtros seleccionados.")
         return
 
-    # 1. Barajamos los índices del DataFrame (solo una vez por día/usuario)
-    if 'shuffled_indices' not in st.session_state:
-        # Calculamos la semilla diaria basada en el día ordinal.
-        # Esto asegura que todos los usuarios vean el mismo orden HOY, 
-        # pero que el orden cambie MAÑANA.
-        today = datetime.date.today()
-        daily_seed = today.toordinal() 
-        
-        # Usamos la semilla diaria para el barajado.
-        st.session_state['shuffled_indices'] = df.sample(frac=1, random_state=daily_seed).index.tolist()
+    # --- Lógica de Paginación ---
     
-    # 2. Creamos el DataFrame base para mostrar (barajado)
-    df_display = df.loc[st.session_state['shuffled_indices']] 
-    
-    # --- Definición de columnas de búsqueda (18 en total) ---
-    SEARCH_COLUMNS = [
-        'Título original', 'Título en español', 'País', 'Año', 'Metraje', 
-        'Sinopsis', 'Grupo', 'Género', 'Orientación', 'Perversiones', 
-        'Realizador', 'Libro', 'Estudio', 'Reparto', 'Fotografía', 
-        'Música', 'Comentarios', 'Especial'
-    ]
-
-    # --- 3. Barra de búsqueda ---
-    search_query = st.text_input(
-        "🎬 Buscar en el Catálogo (AND Multi-Palabra)",
-        placeholder="Escribe palabras clave (ej: Darín AND comedia AND argentina)...",
-        key="catalog_search"
-    )
-
-    # --- 4. Lógica de Filtrado (solo si hay una consulta) ---
-    if search_query:
-        # Reinicia la página a 1 si la búsqueda cambia
-        if 'last_search_query' not in st.session_state or st.session_state['last_search_query'] != search_query:
-            st.session_state['current_page'] = 1
-            st.session_state['last_search_query'] = search_query
-
-        # Creamos una copia del DataFrame para el proceso de búsqueda y aplicamos la limpieza
-        df_searchable = df_display.copy()
-        for col in SEARCH_COLUMNS:
-            if col in df_searchable.columns:
-                # Aplicamos la función de limpieza a cada columna que se utilizará en la búsqueda
-                df_searchable[col] = df_searchable[col].apply(clean_text_for_search)
-                
-        # Normalizamos la consulta y la dividimos en palabras clave
-        keywords = clean_text_for_search(search_query).split()
-        
-        # Máscara final: Inicialmente True para todas las filas. 
-        final_mask = pd.Series([True] * len(df_searchable), index=df_searchable.index)
-
-        # Iteramos sobre cada palabra clave
-        for keyword in keywords:
-            # Si la palabra clave está vacía después de la limpieza (ej: solo se ingresó puntuación), la ignoramos
-            if not keyword:
-                continue
-                
-            # Máscara para la palabra clave actual (OR entre las 18 columnas)
-            keyword_mask = pd.Series([False] * len(df_searchable), index=df_searchable.index)
-            
-            # Combinamos condiciones OR a través de las 18 columnas para la palabra clave actual
-            for col in SEARCH_COLUMNS:
-                if col in df_searchable.columns:
-                    col_contains_keyword = df_searchable[col].str.contains(keyword, regex=False, na=False)
-                    keyword_mask = keyword_mask | col_contains_keyword
-            
-            # Combinamos la máscara de la palabra clave con la máscara final (AND booleano)
-            final_mask = final_mask & keyword_mask 
-            
-        # Aplicamos el filtro combinado al DataFrame ORIGINAL (df_display)
-        df_display = df_display[final_mask]
-    else:
-        # Reinicia la página a 1 si se borra la búsqueda
-        if 'last_search_query' in st.session_state and st.session_state['last_search_query']:
-             st.session_state['current_page'] = 1
-             st.session_state['last_search_query'] = ''
-
-
-    # --- 5. Lógica de Paginación ---
-    
-    total_items = len(df_display)
+    total_items = len(filtered_df)
     total_pages = int(np.ceil(total_items / ITEMS_PER_PAGE))
     
-    # Aseguramos que la página actual no exceda el límite
-    if st.session_state['current_page'] > total_pages and total_pages > 0:
-        st.session_state['current_page'] = total_pages
-    elif total_pages == 0:
-          st.session_state['current_page'] = 1
-
-    current_page = st.session_state['current_page']
+    # Inicializar estado de página si no existe
+    if 'page' not in st.session_state:
+        st.session_state.page = 1
     
-    # Calcular índices de corte
-    start_idx = (current_page - 1) * ITEMS_PER_PAGE
-    end_idx = start_idx + ITEMS_PER_PAGE
-    
-    # Aplicar paginación al DataFrame
-    df_paginated = df_display.iloc[start_idx:end_idx]
+    # Asegurar que la página actual sea válida
+    current_page = st.session_state.page
+    if current_page > total_pages:
+        current_page = total_pages
+        st.session_state.page = total_pages
 
-    # --- 6. Título con recuento y Paginación (Superior) ---
-    col_count, col_nav_top = st.columns([3, 1])
-
-    with col_count:
-        st.subheader(f"Catálogo: {total_items} películas encontradas")
+    # Calcular el rango de índices para la página actual
+    start_index = (current_page - 1) * ITEMS_PER_PAGE
+    end_index = start_index + ITEMS_PER_PAGE
     
-    # Muestra el indicador de página solo si hay más de una página
-    if total_pages > 1:
-        with col_nav_top:
-            st.markdown(f"<p style='text-align: right; margin: 0; padding-top: 15px;'>Página {current_page} de {total_pages}</p>", unsafe_allow_html=True)
+    # Obtener los datos para la página actual
+    page_df = filtered_df.iloc[start_index:end_index]
+
+    # --- Mostrar Elementos ---
+    
+    # Título y Recuento
+    st.markdown(f"### Catálogo ({total_items} resultados)")
+    
+    # Renderizar el Grid
+    cols = st.columns(6)
+    for i, (_, row) in enumerate(page_df.iterrows()):
+        col = cols[i % 6]
+        with col:
+            # URL de la imagen de ejemplo (usando el índice para variar)
+            placeholder_image_url = f"https://placehold.co/200x300/222222/cccccc?text={row['index']}"
             
-    # --- 7. Navegación Superior (Botones) ---
-    if total_pages > 1:
-        nav_cols_top = st.columns([1, 10, 1])
-        
-        with nav_cols_top[0]:
-            if st.button("<< Anterior", key="nav_prev_top", disabled=(current_page == 1)):
-                st.session_state['current_page'] -= 1
+            # Usar el índice del DataFrame (la clave principal) para identificar el item
+            item_index = row.name
+            
+            # Crear un botón con la imagen y el título
+            st.image(placeholder_image_url, use_column_width=True)
+            st.markdown(f"**{row['title']}**")
+            
+            # Botón de "Ver Detalle"
+            if st.button("Ver Detalle", key=f"detail_{item_index}"):
+                st.session_state.current_page = 'detail'
+                st.session_state.selected_index = item_index
+                # Actualizar la URL para el deep link
+                st.query_params["item_index"] = str(item_index)
                 st.rerun()
 
-        with nav_cols_top[2]:
-            if st.button("Siguiente >>", key="nav_next_top", disabled=(current_page == total_pages)):
-                st.session_state['current_page'] += 1
-                st.rerun()
-
-    # --- CSS GLOBAL Y GRID RESPONSIVO ---
-    st.markdown("""
-    <style>
-        .catalog-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 20px;
-            margin-top: 20px;
-            margin-bottom: 30px; /* Espacio antes de la paginación inferior */
-        }
-        
-        .catalog-card {
-            background-color: transparent;
-            border-radius: 8px;
-            transition: transform 0.2s;
-            display: flex;
-            flex-direction: column;
-            text-decoration: none !important;
-            color: inherit !important;
-            height: 100%; /* Ocupar toda la altura disponible */
-        }
-        
-        .catalog-card:hover {
-            transform: scale(1.03);
-        }
-        
-        .catalog-img-container {
-            width: 100%;
-            height: 350px; /* Altura por defecto para escritorio */
-            background-color: #0e1117;
-            border-radius: 8px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 8px;
-            position: relative;
-        }
-        
-        .catalog-img-container img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover; /* Cambiado a cover para llenar el espacio */
-        }
-        
-        .catalog-text h3 {
-            color: white !important;
-            margin: 0 0 2px 0 !important;
-            font-size: 1.1em !important; 
-            font-weight: 800 !important; 
-            line-height: 1.1 !important;
-            
-            /* Limitar líneas del título */
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        
-        .catalog-text p {
-            margin: 0px 0 1px 0 !important;
-            line-height: 1.2 !important;
-            white-space: nowrap; /* Evitar que textos cortos rompan línea */
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        a.catalog-link {
-            text-decoration: none;
-            color: inherit;
-            display: block; /* Asegurar que el enlace ocupe el bloque */
-        }
-        a.catalog-link:hover {
-            text-decoration: none;
-            color: inherit;
-            color: #FF4B4B; /* Cambiar color en hover para feedback */
-        }
-
-        /* AJUSTE PARA MÓVILES: Forzar 2 columnas simétricas */
-        @media (max-width: 600px) {
-            .catalog-grid {
-                /* minmax(0, 1fr) fuerza a que las columnas respeten el ancho y sean iguales */
-                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-                gap: 10px !important; 
-            }
-            .catalog-img-container {
-                /* aspect-ratio mantiene la proporción vertical (2:3) automáticamente */
-                height: auto !important; 
-                aspect-ratio: 2/3 !important; 
-            }
-            .catalog-text h3 {
-                font-size: 0.9em !important;
-            }
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # --- GENERACIÓN DEL HTML DEL CATÁLOGO (usa df_paginated) ---
-    cards_html = ""
+    # --- Controles de Paginación ---
     
-    for index, row in df_paginated.iterrows(): # Usamos df_paginated
-        cover_url = row.get('Portada', '')
+    st.markdown("---")
+    
+    pag_col1, pag_col2, pag_col3 = st.columns([1, 3, 1])
+
+    with pag_col1:
+        if current_page > 1:
+            if st.button("← Anterior"):
+                change_page(current_page - 1)
+
+    with pag_col2:
+        # Crear un selectbox para ir directamente a la página
+        page_options = [f"Página {i} de {total_pages}" for i in range(1, total_pages + 1)]
+        selected_option = page_options[current_page - 1]
         
-        if cover_url and cover_url != 'nan':
-            genre = row.get('Género', 'N/A')
-            country_flag = row.get('Bandera', '')
-            icon_value = row.get('ÍconoMetraje', '')
-            title = row.get('Título en español', 'Sin Título')
-            year = row.get('Año', 'N/A')
-            maker = row.get('Realizador', 'N/A')
+        # Mostrar el selectbox sin permitir cambios si solo hay una página
+        if total_pages > 1:
+            selected_page_text = st.selectbox(
+                "Ir a la página", 
+                page_options, 
+                index=current_page - 1,
+                label_visibility="collapsed"
+            )
+            # Extraer el número de página de la selección de texto
+            # Usamos un regex simple para extraer el número
+            match = re.search(r'Página (\d+)', selected_page_text)
+            new_page_num = int(match.group(1)) if match else current_page
             
-            scale_value = row.get('Escala', '')
-            duration = row.get('Duración', 'N/A')
-            hands_emoji = ""
-            if scale_value:
-                try:
-                    num_hands = int(float(scale_value)) 
-                    hands_emoji = "✋" * num_hands
-                except ValueError:
-                    hands_emoji = scale_value
-
-            link_url = f"?item_index={index}"
-
-            # Construimos la tarjeta HTML en una sola línea para evitar problemas de parsing
-            card = f'<a href="{link_url}" target="_self" class="catalog-link"><div class="catalog-card"><div class="catalog-img-container"><img src="{cover_url}" loading="lazy"></div><div class="catalog-text"><p style="color: #FF4B4B; font-size: 0.8em; text-transform: uppercase;">{icon_value} {genre} {country_flag}</p><h3>{title}</h3><p style="color: #AAAAAA; font-size: 0.9em;">{year} | {maker}</p><p style="font-size: 1.0em; color: white;">{hands_emoji} <span style="font-size: 0.8em; color: #888;">| {duration}</span></p></div></div></a>'
+            # Cambiar la página si el usuario seleccionó una diferente
+            if new_page_num != current_page:
+                change_page(new_page_num)
+        else:
+            st.markdown(f"<p style='text-align: center;'>Página 1 de 1</p>", unsafe_allow_html=True)
             
-            cards_html += card
 
-    # Renderizamos todo el grid
-    st.markdown(f'<div class="catalog-grid">{cards_html}</div>', unsafe_allow_html=True)
-
-
-    # --- 8. Navegación Inferior (Botones) ---
-    if total_pages > 1:
-        st.markdown("---")
-        nav_cols_bottom = st.columns([1, 10, 1])
-        
-        with nav_cols_bottom[0]:
-            if st.button("<< Anterior", key="nav_prev_bottom", disabled=(current_page == 1)):
-                st.session_state['current_page'] -= 1
-                st.rerun()
-
-        with nav_cols_bottom[1]:
-            st.markdown(f"<p style='text-align: center; margin: 0; padding-top: 10px;'>Página {current_page} de {total_pages}</p>", unsafe_allow_html=True)
-
-        with nav_cols_bottom[2]:
-            if st.button("Siguiente >>", key="nav_next_bottom", disabled=(current_page == total_pages)):
-                st.session_state['current_page'] += 1
-                st.rerun()
+    with pag_col3:
+        if current_page < total_pages:
+            if st.button("Siguiente →"):
+                change_page(current_page + 1)
                 
-# ----------------------------------------------------
-# 🟢 FLUJO PRINCIPAL
-# ----------------------------------------------------
+    st.markdown("---")
+    st.markdown(f"<p style='text-align: center; color: gray; font-size: 0.8em;'>Mostrando ítems {start_index + 1} a {min(end_index, total_items)} de {total_items} en total.</p>", unsafe_allow_html=True)
 
-if not df.empty:
-    if st.session_state['current_view'] == 'catalog':
-        show_catalog(df)
-    elif st.session_state['current_view'] == 'detail':
-        show_detail_page(df, st.session_state['selected_item_index'])
+
+# --- LÓGICA DE LA APLICACIÓN PRINCIPAL ---
+
+# Inicializar estado de página
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = 'catalog'
+if 'page' not in st.session_state:
+    st.session_state.page = 1
+
+# Cargar los datos
+df_main = load_data()
+
+# Solo si el DataFrame no está vacío (la carga fue exitosa) se procede
+if not df_main.empty:
+    if st.session_state.current_page == 'catalog':
+        show_catalog(df_main)
+    elif st.session_state.current_page == 'detail':
+        # Asegurarse de que selected_index exista en el estado de sesión
+        if 'selected_index' in st.session_state:
+            show_detail_page(df_main, st.session_state.selected_index)
+        else:
+            # Fallback si el estado es 'detail' pero falta el índice
+            st.error("Error: Ítem de detalle no especificado. Volviendo al catálogo.")
+            go_to_catalog()
