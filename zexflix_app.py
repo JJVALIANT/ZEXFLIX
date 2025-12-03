@@ -102,7 +102,8 @@ def load_data():
             st.error("Error al cargar datos. Error: No se encontró la hoja de cálculo llamada 'MAIN'.")
         # ⚠️ Mensaje clave para el error 404/403: Se recuerda al usuario el permiso.
         elif "<Response [404]>" in str(e) or "<Response [403]>" in str(e):
-            st.error("Error de acceso a la hoja de cálculo. Por favor, asegúrate de que la hoja esté compartida como 'Editor' o 'Lector' con la cuenta de servicio de Google Cloud (el email dentro de tu JSON de credenciales).")
+            # 💡 MENSAJE MEJORADO PARA SER MÁS EXPLÍCITO SOBRE LA CUENTA DE SERVICIO
+            st.error("Error de acceso (403). Confirma que has compartido la hoja de cálculo (**MAIN**) con la **cuenta de servicio** de Google (el email críptico que termina en **.iam.gserviceaccount.com**) como 'Editor'.")
         else:
             # Mensaje genérico, que ahora incluye el nuevo error "Detalles: data"
             st.error(f"Error desconocido al cargar datos. Asegúrate que la hoja de cálculo esté compartida con la cuenta de servicio. Detalles: {e}")
