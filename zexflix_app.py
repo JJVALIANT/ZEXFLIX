@@ -53,22 +53,39 @@ def load_data():
         gc = gspread.service_account_from_dict(creds_json)
         
         # Abre la hoja de cálculo por URL (asegúrate de que la URL y el nombre de la hoja sean correctos)
-        # 🟢 MODIFICACIÓN: Se inserta el ID proporcionado por el usuario.
-        spreadsheet_url = st.secrets.get("spreadsheet_url", "https://docs.google.com/spreadsheets/d/1d4OatU_u7Obj_BKW4vGov6gIZzivl4N3KsIqUua19Jc/edit#gid=0")
+        # Se mantiene el ID de hoja de cálculo que el usuario proporcionó
+        spreadsheet_url = st.secrets.get("spreadsheet_url", "https://docs.google.com/spreadsheets/d/1d4OatU_u7Obj_BKW4vGov6gIZsivl4N3KsIqUua19Jc/edit#gid=0")
         
         # Intenta abrir el libro
         sh = gc.open_by_url(spreadsheet_url)
         
-        # Selecciona la primera hoja de trabajo
-        worksheet = sh.worksheet("data")
+        # 🔴 CORRECCIÓN CLAVE: Selecciona la hoja de trabajo llamada "MAIN" en lugar de "data".
+        worksheet = sh.worksheet("MAIN")
 
-        # Obtiene todos los registros y los convierte a DataFrame
-        data = worksheet.get_all_records()
-        df = pd.DataFrame(data)
+        # 🟢 CORRECCIÓN PARA EVITAR ERROR 'Detalles: data':
+        # 1. Usamos get_all_values para una extracción de datos más segura.
+        data = worksheet.get_all_values()
+
+        if not data:
+            st.error("Error al cargar datos. La hoja 'MAIN' parece estar vacía.")
+            return pd.DataFrame()
+        
+        # 2. Separar encabezados y filas de datos
+        headers = data[0]
+        rows = data[1:]
+
+        # 3. Crear el DataFrame
+        df = pd.DataFrame(rows, columns=headers)
 
         # Configuración de los datos
         df.set_index('index', inplace=True)
-        df.index = df.index.astype(int)
+        # Se añade un manejo de errores en caso de que la columna 'index' sea nula o no numérica
+        try:
+            df.index = df.index.astype(int)
+        except ValueError:
+            st.error("Error de datos: La columna 'index' debe contener solo números enteros válidos.")
+            return pd.DataFrame()
+            
         df['release_year'] = pd.to_numeric(df['release_year'], errors='coerce').fillna(0).astype(int)
 
         return df
@@ -80,12 +97,14 @@ def load_data():
         # Muestra otros errores de carga de datos
         elif "service_account_from_dict" in str(e):
             st.error("Error al cargar datos. Error: Módulo 'gspread' obsoleto. Por favor, actualiza la librería en 'requirements.txt' a gspread>=5.0.0.")
-        elif "worksheet 'data'" in str(e):
-            st.error("Error al cargar datos. Error: No se encontró la hoja de cálculo llamada 'data'.")
+        # 🔴 MENSAJE DE ERROR ACTUALIZADO PARA EL NOMBRE DE LA HOJA
+        elif "worksheet 'MAIN'" in str(e):
+            st.error("Error al cargar datos. Error: No se encontró la hoja de cálculo llamada 'MAIN'.")
         # ⚠️ Mensaje clave para el error 404/403: Se recuerda al usuario el permiso.
         elif "<Response [404]>" in str(e) or "<Response [403]>" in str(e):
             st.error("Error de acceso a la hoja de cálculo. Por favor, asegúrate de que la hoja esté compartida como 'Editor' o 'Lector' con la cuenta de servicio de Google Cloud (el email dentro de tu JSON de credenciales).")
         else:
+            # Mensaje genérico, que ahora incluye el nuevo error "Detalles: data"
             st.error(f"Error desconocido al cargar datos. Asegúrate que la hoja de cálculo esté compartida con la cuenta de servicio. Detalles: {e}")
         return pd.DataFrame()
 
