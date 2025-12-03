@@ -11,10 +11,10 @@ ITEMS_PER_PAGE = 24
 # 1. Configuración de la página
 st.set_page_config(
     layout="wide",
-    page_title="ZEXFLIX", 
+    page_title="SEXFLIX", 
     initial_sidebar_state="collapsed"
 )
-st.title("ZEXFLIX")
+st.title("SEXFLIX")
 
 # --- LÓGICA DE NAVIGACIÓN POR URL (REESTRUCTURADA) ---
 
