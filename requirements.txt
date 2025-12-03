@@ -1,4 +1,6 @@
-streamlit>=1.35
+streamlit
 pandas
-gspread
 numpy
+gspread>=5.0.0  # Aseguramos una versión moderna de gspread
+gspread-dataframe
+oauth2client
