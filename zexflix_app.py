@@ -52,22 +52,22 @@ def load_data():
         # 🐛 CORRECCIÓN DEL ERROR: Se elimina la palabra 'account' repetida.
         gc = gspread.service_account_from_dict(creds_json)
         
-        # Abre la hoja de cálculo por URL (asegúrate de que la URL y el nombre de la hoja sean correctos)
-        # Se mantiene el ID de hoja de cálculo que el usuario proporcionó
-        spreadsheet_url = st.secrets.get("spreadsheet_url", "https://docs.google.com/spreadsheets/d/1d4OatU_u7Obj_BKW4vGov6gIZsivl4N3KsIqUua19Jc/edit#gid=0")
+        # 🔄 RESTAURANDO LA LÓGICA ORIGINAL (v0.08)
+        # ID CORRECTO copiado de tu código original:
+        spreadsheet_id = "1d4OatU_u7Obj_BKW4vGov6gIZzivl4N3KsIqUua19Jc" 
         
-        # Intenta abrir el libro
-        sh = gc.open_by_url(spreadsheet_url)
+        # Usamos open_by_key tal cual lo hacías en local
+        sh = gc.open_by_key(spreadsheet_id)
         
-        # 🔴 CORRECCIÓN CLAVE: Selecciona la hoja de trabajo llamada "MAIN" en lugar de "data".
-        worksheet = sh.worksheet("MAIN")
+        # Usamos la primera hoja (índice 0) tal cual lo hacías en local
+        # Esto evita errores si la hoja se llama "MAIN " (con espacio) o de otra forma.
+        worksheet = sh.get_worksheet(0)
 
-        # 🟢 CORRECCIÓN PARA EVITAR ERROR 'Detalles: data':
-        # 1. Usamos get_all_values para una extracción de datos más segura.
+        # 🟢 Extracción segura de datos
         data = worksheet.get_all_values()
 
         if not data:
-            st.error("Error al cargar datos. La hoja 'MAIN' parece estar vacía.")
+            st.error("Error al cargar datos. La hoja parece estar vacía.")
             return pd.DataFrame()
         
         # 2. Separar encabezados y filas de datos
@@ -97,15 +97,12 @@ def load_data():
         # Muestra otros errores de carga de datos
         elif "service_account_from_dict" in str(e):
             st.error("Error al cargar datos. Error: Módulo 'gspread' obsoleto. Por favor, actualiza la librería en 'requirements.txt' a gspread>=5.0.0.")
-        # 🔴 MENSAJE DE ERROR ACTUALIZADO PARA EL NOMBRE DE LA HOJA
-        elif "worksheet 'MAIN'" in str(e):
-            st.error("Error al cargar datos. Error: No se encontró la hoja de cálculo llamada 'MAIN'.")
         # ⚠️ Mensaje clave para el error 404/403: Se recuerda al usuario el permiso.
         elif "<Response [404]>" in str(e) or "<Response [403]>" in str(e):
             # 💡 MENSAJE MEJORADO PARA SER MÁS EXPLÍCITO SOBRE LA CUENTA DE SERVICIO
-            st.error("Error de acceso (403). Confirma que has compartido la hoja de cálculo (**MAIN**) con la **cuenta de servicio** de Google (el email críptico que termina en **.iam.gserviceaccount.com**) como 'Editor'.")
+            st.error("Error de acceso (403/404). Confirma que has compartido la hoja de cálculo con la **cuenta de servicio** de Google (el email críptico que termina en **.iam.gserviceaccount.com**) como 'Editor'.")
         else:
-            # Mensaje genérico, que ahora incluye el nuevo error "Detalles: data"
+            # Mensaje genérico
             st.error(f"Error desconocido al cargar datos. Asegúrate que la hoja de cálculo esté compartida con la cuenta de servicio. Detalles: {e}")
         return pd.DataFrame()
 
