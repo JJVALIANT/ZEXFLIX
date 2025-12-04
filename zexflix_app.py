@@ -62,22 +62,28 @@ header {
 </style>
 
 <script>
-    // 🟢 SCRIPT ROBUSTO CON RETARDO
-    // Se define la función de forma global.
+    // 🟢 SCRIPT DEFINITIVO USANDO DISPATCHEVENT
+    // Esto crea y dispara un evento de bajo nivel, lo que es más efectivo que un simple .click()
     function toggleSidebar() {
-      // Usamos un pequeño retardo (ej: 50ms) para asegurar que el DOM esté listo,
-      // ya que la carga de Streamlit a veces es asíncrona.
+      // Esperamos 100ms para asegurar que el DOM esté completamente cargado.
       setTimeout(() => {
-        // Buscamos el elemento que controla el colapso del sidebar de Streamlit.
         const sidebarToggle = document.querySelector('[data-testid="stSidebarCollapse"]');
+        
         if (sidebarToggle) {
-          // Si lo encuentra, simula el clic.
-          sidebarToggle.click(); 
+          // 1. Crear un evento de ratón de bajo nivel
+          const clickEvent = new MouseEvent('click', {
+              view: window,
+              bubbles: true,
+              cancelable: true
+          });
+
+          // 2. Disparar el evento directamente en el elemento
+          sidebarToggle.dispatchEvent(clickEvent);
+          
         } else {
-          // Esto es útil para debug. Si falla, puedes abrir la consola.
           console.error("No se encontró el botón de toggle del sidebar.");
         }
-      }, 50); // 50 milisegundos de espera
+      }, 100); 
     }
 </script>
 """, unsafe_allow_html=True)
