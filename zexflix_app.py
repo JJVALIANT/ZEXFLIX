@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 # Reemplazamos st.title por la imagen del logo
-st.image("https://imgur.com/4WKV5rd.png", use_column_width=False) 
+st.image("https://imgur.com/4DErkuR.png", use_column_width=False) 
 
 # --- CSS para reducir el espacio superior del contenedor y ajustar botones ---
 st.markdown("""
