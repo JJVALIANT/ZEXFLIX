@@ -62,22 +62,27 @@ header {
 </style>
 
 <script>
-    // 🟢 SCRIPT DEFINITIVO USANDO DISPATCHEVENT
-    // Esto crea y dispara un evento de bajo nivel, lo que es más efectivo que un simple .click()
+    // 🟢 SCRIPT ULTIMATE: Fuerza visibilidad + Dispara evento de bajo nivel
     function toggleSidebar() {
       // Esperamos 100ms para asegurar que el DOM esté completamente cargado.
       setTimeout(() => {
+        // Este es el botón de la hamburguesa oculto cuando la barra lateral está colapsada.
         const sidebarToggle = document.querySelector('[data-testid="stSidebarCollapse"]');
         
         if (sidebarToggle) {
-          // 1. Crear un evento de ratón de bajo nivel
+          
+          // 1. FORZAR INTERACCIÓN: Ignorar los estilos CSS que ocultan el elemento.
+          sidebarToggle.style.visibility = 'visible';
+          sidebarToggle.style.pointerEvents = 'auto'; // Asegura que acepta eventos de ratón.
+
+          // 2. Crear un evento de ratón de bajo nivel (el método más robusto para simular un clic)
           const clickEvent = new MouseEvent('click', {
               view: window,
               bubbles: true,
               cancelable: true
           });
 
-          // 2. Disparar el evento directamente en el elemento
+          // 3. Disparar el evento directamente en el elemento
           sidebarToggle.dispatchEvent(clickEvent);
           
         } else {
