@@ -16,18 +16,23 @@ st.set_page_config(
 )
 st.title("ZEXFLIX")
 
-# --- CSS para reducir el espacio superior del título (AÑADIDO) ---
+# --- CSS para reducir el espacio superior del título y ajustar botones ---
 st.markdown("""
 <style>
 /* Reduce el padding superior del contenedor principal de la página */
 .block-container {
-    padding-top: 1.5rem; /* Ajustado a 1.5rem (aprox. 24px) para reducir el espacio superior */
+    padding-top: 1.5rem; 
     padding-bottom: 0rem; 
 }
 
 /* Reduce el margen superior del h1 (st.title) */
 h1 {
     margin-top: 0rem !important;
+}
+
+/* Ajuste opcional para botones en móviles si es necesario */
+div.stButton > button {
+    width: 100%;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -316,14 +321,18 @@ def show_catalog(df):
             
     # --- 7. Navegación Superior (Botones) ---
     if total_pages > 1:
-        nav_cols_top = st.columns([1, 10, 1])
+        # 🟢 CAMBIO: Usamos solo 2 columnas (50% cada una) para que en móvil quepan lado a lado
+        # Antes era [1, 10, 1] lo que colapsaba en móvil.
+        nav_cols_top = st.columns(2)
         
         with nav_cols_top[0]:
             if st.button("<< Anterior", key="nav_prev_top", disabled=(current_page == 1)):
                 st.session_state['current_page'] -= 1
                 st.rerun()
 
-        with nav_cols_top[2]:
+        with nav_cols_top[1]:
+            # Nota: Al no haber espaciador central, el botón "Siguiente" estará pegado a la mitad, 
+            # pero alineado a la izquierda de su columna. Esto asegura que estén en la misma línea.
             if st.button("Siguiente >>", key="nav_next_top", disabled=(current_page == total_pages)):
                 st.session_state['current_page'] += 1
                 st.rerun()
@@ -463,7 +472,9 @@ def show_catalog(df):
     # --- 8. Navegación Inferior (Botones) ---
     if total_pages > 1:
         st.markdown("---")
-        nav_cols_bottom = st.columns([1, 10, 1])
+        # 🟢 CAMBIO: Reducimos el espacio central ([1, 2, 1] en vez de [1, 10, 1])
+        # Esto permite que las columnas laterales sean más anchas y los botones quepan sin apilarse.
+        nav_cols_bottom = st.columns([1, 2, 1])
         
         with nav_cols_bottom[0]:
             if st.button("<< Anterior", key="nav_prev_bottom", disabled=(current_page == 1)):
