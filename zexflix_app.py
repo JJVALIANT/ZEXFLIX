@@ -14,41 +14,38 @@ st.set_page_config(
     page_title="ZEXFLIX", 
     initial_sidebar_state="collapsed"
 )
-# Reemplazamos st.title por la imagen del logo
-st.image("https://imgur.com/4DErkuR.png", use_column_width=False) 
 
-# --- CSS para reducir el espacio superior del contenedor, ajustar botones y OCULTAR TOOLBAR ---
+# --- CSS y JS para Responsive, Ocultar Toolbar y LOGO CLICKEABLE ---
 st.markdown("""
 <style>
 /* 1. OCULTAR LA BARRA DE HERRAMIENTAS SUPERIOR (TOOLBAR/HEADER) */
-/* Esto elimina la barra donde están el logo de GitHub y el menú de tres puntos. */
 header {
     visibility: hidden;
     height: 0px !important;
     padding: 0 !important;
 }
 
-/* 2. OCULTAR EL MENÚ DE TRES PUNTOS POR SEPARADO (opcional) */
+/* 2. OCULTAR EL MENÚ DE TRES PUNTOS POR SEPARADO */
 #MainMenu {
     visibility: hidden;
 }
 
-/* 3. Ajustes de padding y margen del contenido principal (ya solicitados) */
+/* 3. Ajustes de padding y margen del contenido principal */
 .block-container {
     padding-top: 1.6rem; 
     padding-bottom: 0rem; 
 }
 
-/* 4. AJUSTE DE LA IMAGEN DEL LOGO PARA SER RESPONSIVA */
-/* Hacemos que la imagen del logo (dentro de su contenedor .stImage) se ajuste al ancho 
-   de la pantalla, pero limitamos su altura máxima para que no sea gigante en escritorio. */
-.stImage {
+/* 4. AJUSTE DE LA IMAGEN DEL LOGO PARA SER RESPONSIVA Y CLICKEABLE */
+/* El logo ahora está dentro de un contenedor .custom-logo-container */
+.custom-logo-container {
+    cursor: pointer; /* Indica que es interactivo */
     margin-bottom: 15px; /* Margen inferior */
-    text-align: center; /* Centrar la imagen dentro de su contenedor */
+    text-align: center; /* Centrar la imagen */
 }
 
-.stImage > img {
-    max-width: 100%; /* El ancho máximo es el 100% de la columna (responsivo) */
+.custom-logo-container img {
+    max-width: 100%; /* El ancho máximo es el 100% de la columna (responsive) */
     height: auto;    /* Mantiene la proporción */
     max-height: 80px; /* Altura máxima para pantallas grandes */
     width: auto;     /* Permite que se ajuste */
@@ -58,7 +55,7 @@ header {
 }
 
 @media (max-width: 600px) {
-    .stImage > img {
+    .custom-logo-container img {
         max-height: 60px; /* Reducir ligeramente en móvil */
     }
 }
@@ -68,8 +65,28 @@ div.stButton > button {
     width: 100%;
 }
 </style>
+
+<script>
+    // Función JavaScript que simula el clic en el botón de colapsar/expandir el sidebar
+    function toggleSidebar() {
+      // Streamlit utiliza este data-testid para el botón de la barra lateral (hamburguesa)
+      const sidebarToggle = document.querySelector('[data-testid="stSidebarCollapse"]');
+      if (sidebarToggle) {
+        sidebarToggle.click(); // Simular clic
+      }
+    }
+</script>
 """, unsafe_allow_html=True)
-# --- FIN CSS ---
+# --- FIN CSS y JS ---
+
+# 🟢 REEMPLAZO DE st.image por st.markdown con HTML y JS
+LOGO_URL = "https://i.imgur.com/4WKV5rd.png"
+LOGO_HTML = f"""
+<div class="custom-logo-container" onclick="toggleSidebar()">
+    <img src="{LOGO_URL}" alt="ZEXFLIX Logo">
+</div>
+"""
+st.markdown(LOGO_HTML, unsafe_allow_html=True) 
 
 # --- LÓGICA DE NAVIGACIÓN POR URL (REESTRUCTURADA) ---
 
@@ -149,6 +166,10 @@ df = load_data()
 # ----------------------------------------------------
 # 🟢 FUNCIONES DE VISTAS
 # ----------------------------------------------------
+
+# Nota: Si el usuario desea que el logo también resetee el catálogo (ir a la página 1),
+# podría envolver el LOGO_HTML en un hipervínculo que apunte a la URL base (`/`).
+# Por ahora, solo abrimos el sidebar según lo solicitado.
 
 def get_youtube_id(url):
     if not url: return None
@@ -232,7 +253,6 @@ def show_detail_page(df, selected_index):
 
 # Función de sanitización de texto para la búsqueda
 # Reemplaza cualquier carácter que no sea alfanumérico o espacio con un espacio
-# Esto evita el error 'InvalidCharacterError' causado por caracteres invisibles o especiales
 def clean_text_for_search(text):
     if pd.isna(text):
         return ""
@@ -248,8 +268,6 @@ def show_catalog(df):
     # 1. Barajamos los índices del DataFrame (solo una vez por día/usuario)
     if 'shuffled_indices' not in st.session_state:
         # Calculamos la semilla diaria basada en el día ordinal.
-        # Esto asegura que todos los usuarios vean el mismo orden HOY, 
-        # pero que el orden cambie MAÑANA.
         today = datetime.date.today()
         daily_seed = today.toordinal() 
         
@@ -525,6 +543,14 @@ def show_catalog(df):
 # ----------------------------------------------------
 # 🟢 FLUJO PRINCIPAL
 # ----------------------------------------------------
+
+# Nota: El contenido de la barra lateral (st.sidebar) no se ha modificado,
+# pero ahora es accesible haciendo clic en el logo.
+st.sidebar.markdown("# Opciones de Filtrado")
+st.sidebar.markdown("Puedes añadir filtros aquí, como por género o año.")
+st.sidebar.markdown("---")
+st.sidebar.caption("Aplicación Zexflix v0.10")
+
 
 if not df.empty:
     if st.session_state['current_view'] == 'catalog':
