@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
-import gspread # Necesario para la conexión segura
+import gspread 
 import numpy as np
 import re
-import datetime # Importamos datetime para obtener la fecha actual
+import datetime 
 
 # Constante para la paginación
 ITEMS_PER_PAGE = 24
@@ -17,10 +17,23 @@ st.set_page_config(
 # Reemplazamos st.title por la imagen del logo
 st.image("https://imgur.com/4DErkuR.png", use_column_width=False) 
 
-# --- CSS para reducir el espacio superior del contenedor y ajustar botones ---
+# --- CSS para reducir el espacio superior del contenedor, ajustar botones y OCULTAR TOOLBAR ---
 st.markdown("""
 <style>
-/* Reduce el padding superior del contenedor principal de la página */
+/* 1. OCULTAR LA BARRA DE HERRAMIENTAS SUPERIOR (TOOLBAR/HEADER) */
+/* Esto elimina la barra donde están el logo de GitHub y el menú de tres puntos. */
+header {
+    visibility: hidden;
+    height: 0px !important;
+    padding: 0 !important;
+}
+
+/* 2. OCULTAR EL MENÚ DE TRES PUNTOS POR SEPARADO (opcional) */
+#MainMenu {
+    visibility: hidden;
+}
+
+/* 3. Ajustes de padding y margen del contenido principal (ya solicitados) */
 .block-container {
     padding-top: 1.6rem; 
     padding-bottom: 0rem; 
@@ -30,8 +43,6 @@ st.markdown("""
 .stImage {
     margin-bottom: 15px; 
 }
-
-/* La regla h1 fue eliminada ya que se reemplazó st.title por st.image */
 
 /* Ajuste opcional para botones en móviles si es necesario */
 div.stButton > button {
