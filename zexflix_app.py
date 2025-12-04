@@ -78,7 +78,7 @@ def load_data():
         # Verificamos si existe la columna Portada antes de filtrar
         if 'Portada' in df_clean.columns:
             df_with_cover = df_clean[df_clean['Portada'].str.strip() != ""] 
-            st.sidebar.caption(f"Películas con Cover: {len(df_with_cover)}")
+            st.sidebar.caption(f"Películas en catálogo: {len(df_with_cover)}")
             return df_with_cover
         else:
             st.error("Error: La columna 'Portada' no se encuentra en la hoja de cálculo.")
@@ -215,7 +215,7 @@ def show_catalog(df):
     # --- 3. Barra de búsqueda ---
     search_query = st.text_input(
         "🎬 Buscar en el Catálogo (AND Multi-Palabra)",
-        placeholder="Escribe palabras clave (ej: Darín AND comedia AND argentina)...",
+        placeholder="Escribe palabras clave (ej: Darín comedia argentina)...",
         key="catalog_search"
     )
 
@@ -290,7 +290,7 @@ def show_catalog(df):
     col_count, col_nav_top = st.columns([3, 1])
 
     with col_count:
-        st.subheader(f"Catálogo: {total_items} películas encontradas")
+        st.subheader(f"{total_items} pelis encontradas")
     
     # Muestra el indicador de página solo si hay más de una página
     if total_pages > 1:
@@ -302,12 +302,12 @@ def show_catalog(df):
         nav_cols_top = st.columns([1, 10, 1])
         
         with nav_cols_top[0]:
-            if st.button("<< Anterior", key="nav_prev_top", disabled=(current_page == 1)):
+            if st.button(" << ", key="nav_prev_top", disabled=(current_page == 1)):
                 st.session_state['current_page'] -= 1
                 st.rerun()
 
         with nav_cols_top[2]:
-            if st.button("Siguiente >>", key="nav_next_top", disabled=(current_page == total_pages)):
+            if st.button(" >> ", key="nav_next_top", disabled=(current_page == total_pages)):
                 st.session_state['current_page'] += 1
                 st.rerun()
 
@@ -449,7 +449,7 @@ def show_catalog(df):
         nav_cols_bottom = st.columns([1, 10, 1])
         
         with nav_cols_bottom[0]:
-            if st.button("<< Anterior", key="nav_prev_bottom", disabled=(current_page == 1)):
+            if st.button(" << ", key="nav_prev_bottom", disabled=(current_page == 1)):
                 st.session_state['current_page'] -= 1
                 st.rerun()
 
@@ -457,7 +457,7 @@ def show_catalog(df):
             st.markdown(f"<p style='text-align: center; margin: 0; padding-top: 10px;'>Página {current_page} de {total_pages}</p>", unsafe_allow_html=True)
 
         with nav_cols_bottom[2]:
-            if st.button("Siguiente >>", key="nav_next_bottom", disabled=(current_page == total_pages)):
+            if st.button(" >> ", key="nav_next_bottom", disabled=(current_page == total_pages)):
                 st.session_state['current_page'] += 1
                 st.rerun()
                 
