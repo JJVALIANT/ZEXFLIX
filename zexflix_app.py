@@ -15,11 +15,11 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS para Responsive, Ocultar Toolbar y LOGO CLICKEABLE ---
+# --- CSS y JS para Responsive, Ocultar Toolbar y LOGO CLICKEABLE ---
 st.markdown("""
 <style>
 /* 1. OCULTAR LA BARRA DE HERRAMIENTAS SUPERIOR (TOOLBAR/HEADER) */
-/* Ocultamos el header para eliminar el menú de tres puntos y el espacio superior */
+/* Es importante que el header esté 'hidden' y no 'display: none' para que los elementos internos sigan siendo interactivos */
 header {
     visibility: hidden;
     height: 0px !important;
@@ -40,14 +40,14 @@ header {
 /* 4. AJUSTE DE LA IMAGEN DEL LOGO PARA SER RESPONSIVA Y CLICKEABLE */
 .custom-logo-container {
     cursor: pointer; /* Indica que es interactivo */
-    margin-bottom: 15px; /* Margen inferior */
-    text-align: center; /* Centrar la imagen */
+    margin-bottom: 15px; 
+    text-align: center; 
 }
 
 .custom-logo-container img {
     max-width: 100%; 
     height: auto;    
-    max-height: 80px; /* Altura máxima para pantallas grandes */
+    max-height: 80px; 
     width: auto;     
     display: block;  
     margin-left: auto;
@@ -56,13 +56,34 @@ header {
 
 @media (max-width: 600px) {
     .custom-logo-container img {
-        max-height: 60px; /* Reducir ligeramente en móvil */
+        max-height: 60px; 
     }
 }
 </style>
-""", unsafe_allow_html=True)
 
-# 🟢 1. Renderizar el Logo con el manejador de clic
+<script>
+    // 🟢 SCRIPT ROBUSTO CON RETARDO
+    // Se define la función de forma global.
+    function toggleSidebar() {
+      // Usamos un pequeño retardo (ej: 50ms) para asegurar que el DOM esté listo,
+      // ya que la carga de Streamlit a veces es asíncrona.
+      setTimeout(() => {
+        // Buscamos el elemento que controla el colapso del sidebar de Streamlit.
+        const sidebarToggle = document.querySelector('[data-testid="stSidebarCollapse"]');
+        if (sidebarToggle) {
+          // Si lo encuentra, simula el clic.
+          sidebarToggle.click(); 
+        } else {
+          // Esto es útil para debug. Si falla, puedes abrir la consola.
+          console.error("No se encontró el botón de toggle del sidebar.");
+        }
+      }, 50); // 50 milisegundos de espera
+    }
+</script>
+""", unsafe_allow_html=True)
+# --- FIN CSS y JS ---
+
+# 🟢 Renderizar el Logo con el manejador de clic
 LOGO_URL = "https://i.imgur.com/4WKV5rd.png"
 LOGO_HTML = f"""
 <div class="custom-logo-container" onclick="toggleSidebar()">
@@ -70,23 +91,6 @@ LOGO_HTML = f"""
 </div>
 """
 st.markdown(LOGO_HTML, unsafe_allow_html=True) 
-
-# 🟢 2. INYECTAR EL CÓDIGO JAVASCRIPT POR SEPARADO (Mejor para evitar problemas de timing)
-st.markdown("""
-<script>
-    // Función JavaScript que simula el clic en el botón de colapsar/expandir el sidebar
-    function toggleSidebar() {
-      // Usamos el selector oficial de Streamlit.
-      const sidebarToggle = document.querySelector('[data-testid="stSidebarCollapse"]');
-      if (sidebarToggle) {
-        // Ejecutar el clic. Si el botón está oculto con 'visibility: hidden',
-        // el navegador aún debe procesar el evento.
-        sidebarToggle.click(); 
-      }
-    }
-</script>
-""", unsafe_allow_html=True)
-# --- FIN CSS y JS ---
 
 # --- LÓGICA DE NAVIGACIÓN POR URL (REESTRUCTURADA) ---
 
@@ -388,7 +392,7 @@ def show_catalog(df):
             grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
             gap: 20px;
             margin-top: 20px;
-            margin-bottom: 30px; /* Espacio antes de la paginación inferior */
+            margin-bottom: 30px; 
         }
         
         .catalog-card {
@@ -399,7 +403,7 @@ def show_catalog(df):
             flex-direction: column;
             text-decoration: none !important;
             color: inherit !important;
-            height: 100%; /* Ocupar toda la altura disponible */
+            height: 100%; 
         }
         
         .catalog-card:hover {
@@ -408,7 +412,7 @@ def show_catalog(df):
         
         .catalog-img-container {
             width: 100%;
-            height: 350px; /* Altura por defecto para escritorio */
+            height: 350px; 
             background-color: #0e1117;
             border-radius: 8px;
             overflow: hidden;
@@ -422,7 +426,7 @@ def show_catalog(df):
         .catalog-img-container img {
             width: 100%;
             height: 100%;
-            object-fit: cover; /* Cambiado a cover para llenar el espacio */
+            object-fit: cover; 
         }
         
         .catalog-text h3 {
@@ -442,7 +446,7 @@ def show_catalog(df):
         .catalog-text p {
             margin: 0px 0 1px 0 !important;
             line-height: 1.2 !important;
-            white-space: nowrap; /* Evitar que textos cortos rompan línea */
+            white-space: nowrap; 
             overflow: hidden;
             text-overflow: ellipsis;
         }
@@ -450,23 +454,21 @@ def show_catalog(df):
         a.catalog-link {
             text-decoration: none;
             color: inherit;
-            display: block; /* Asegurar que el enlace ocupe el bloque */
+            display: block; 
         }
         a.catalog-link:hover {
             text-decoration: none;
             color: inherit;
-            color: #FF4B4B; /* Cambiar color en hover para feedback */
+            color: #FF4B4B; 
         }
 
         /* AJUSTE PARA MÓVILES: Forzar 2 columnas simétricas */
         @media (max-width: 600px) {
             .catalog-grid {
-                /* minmax(0, 1fr) fuerza a que las columnas respeten el ancho y sean iguales */
                 grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
                 gap: 10px !important; 
             }
             .catalog-img-container {
-                /* aspect-ratio mantiene la proporción vertical (2:3) automáticamente */
                 height: auto !important; 
                 aspect-ratio: 2/3 !important; 
             }
@@ -534,8 +536,6 @@ def show_catalog(df):
 # 🟢 FLUJO PRINCIPAL
 # ----------------------------------------------------
 
-# Nota: El contenido de la barra lateral (st.sidebar) no se ha modificado,
-# pero ahora es accesible haciendo clic en el logo.
 st.sidebar.markdown("# Opciones de Filtrado")
 st.sidebar.markdown("Puedes añadir filtros aquí, como por género o año.")
 st.sidebar.markdown("---")
