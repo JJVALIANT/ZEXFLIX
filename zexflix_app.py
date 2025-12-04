@@ -39,9 +39,28 @@ header {
     padding-bottom: 0rem; 
 }
 
-/* Ajuste del margen inferior para el logo (st.image) */
+/* 4. AJUSTE DE LA IMAGEN DEL LOGO PARA SER RESPONSIVA */
+/* Hacemos que la imagen del logo (dentro de su contenedor .stImage) se ajuste al ancho 
+   de la pantalla, pero limitamos su altura máxima para que no sea gigante en escritorio. */
 .stImage {
-    margin-bottom: 15px; 
+    margin-bottom: 15px; /* Margen inferior */
+    text-align: center; /* Centrar la imagen dentro de su contenedor */
+}
+
+.stImage > img {
+    max-width: 100%; /* El ancho máximo es el 100% de la columna (responsivo) */
+    height: auto;    /* Mantiene la proporción */
+    max-height: 80px; /* Altura máxima para pantallas grandes */
+    width: auto;     /* Permite que se ajuste */
+    display: block;  /* Necesario para centrar la imagen */
+    margin-left: auto;
+    margin-right: auto;
+}
+
+@media (max-width: 600px) {
+    .stImage > img {
+        max-height: 60px; /* Reducir ligeramente en móvil */
+    }
 }
 
 /* Ajuste opcional para botones en móviles si es necesario */
