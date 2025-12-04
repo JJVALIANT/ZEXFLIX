@@ -14,9 +14,10 @@ st.set_page_config(
     page_title="ZEXFLIX", 
     initial_sidebar_state="collapsed"
 )
-st.title("ZEXFLIX")
+# Reemplazamos st.title por la imagen del logo
+st.image("https://imgur.com/4WKV5rd.png", use_column_width=False) 
 
-# --- CSS para reducir el espacio superior del título y ajustar botones ---
+# --- CSS para reducir el espacio superior del contenedor y ajustar botones ---
 st.markdown("""
 <style>
 /* Reduce el padding superior del contenedor principal de la página */
@@ -25,10 +26,12 @@ st.markdown("""
     padding-bottom: 0rem; 
 }
 
-/* Reduce el margen superior del h1 (st.title) */
-h1 {
-    margin-top: 0rem !important;
+/* Ajuste del margen inferior para el logo (st.image) */
+.stImage {
+    margin-bottom: 15px; 
 }
+
+/* La regla h1 fue eliminada ya que se reemplazó st.title por st.image */
 
 /* Ajuste opcional para botones en móviles si es necesario */
 div.stButton > button {
