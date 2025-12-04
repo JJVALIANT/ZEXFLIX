@@ -21,7 +21,7 @@ st.markdown("""
 <style>
 /* Reduce el padding superior del contenedor principal de la página */
 .block-container {
-    padding-top: 1.5rem; 
+    padding-top: 2rem; 
     padding-bottom: 0rem; 
 }
 
