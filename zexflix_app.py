@@ -15,11 +15,10 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS y JS para Responsive, Ocultar Toolbar y LOGO CLICKEABLE ---
+# --- CSS para OCULTAR Toolbar y ajustar padding ---
 st.markdown("""
 <style>
 /* 1. OCULTAR LA BARRA DE HERRAMIENTAS SUPERIOR (TOOLBAR/HEADER) */
-/* Es importante que el header esté 'hidden' y no 'display: none' para que los elementos internos sigan siendo interactivos */
 header {
     visibility: hidden;
     height: 0px !important;
@@ -37,9 +36,8 @@ header {
     padding-bottom: 0rem; 
 }
 
-/* 4. AJUSTE DE LA IMAGEN DEL LOGO PARA SER RESPONSIVA Y CLICKEABLE */
+/* 4. AJUSTE DE LA IMAGEN DEL LOGO PARA SER RESPONSIVA Y CENTRADA */
 .custom-logo-container {
-    cursor: pointer; /* Indica que es interactivo */
     margin-bottom: 15px; 
     text-align: center; 
 }
@@ -60,50 +58,19 @@ header {
     }
 }
 </style>
-
-<script>
-    // 🟢 SCRIPT ULTIMATE: Fuerza visibilidad + Dispara evento de bajo nivel
-    function toggleSidebar() {
-      // Esperamos 100ms para asegurar que el DOM esté completamente cargado.
-      setTimeout(() => {
-        // Este es el botón de la hamburguesa oculto cuando la barra lateral está colapsada.
-        const sidebarToggle = document.querySelector('[data-testid="stSidebarCollapse"]');
-        
-        if (sidebarToggle) {
-          
-          // 1. FORZAR INTERACCIÓN: Ignorar los estilos CSS que ocultan el elemento.
-          sidebarToggle.style.visibility = 'visible';
-          sidebarToggle.style.pointerEvents = 'auto'; // Asegura que acepta eventos de ratón.
-
-          // 2. Crear un evento de ratón de bajo nivel (el método más robusto para simular un clic)
-          const clickEvent = new MouseEvent('click', {
-              view: window,
-              bubbles: true,
-              cancelable: true
-          });
-
-          // 3. Disparar el evento directamente en el elemento
-          sidebarToggle.dispatchEvent(clickEvent);
-          
-        } else {
-          console.error("No se encontró el botón de toggle del sidebar.");
-        }
-      }, 100); 
-    }
-</script>
 """, unsafe_allow_html=True)
-# --- FIN CSS y JS ---
+# --- FIN CSS ---
 
-# 🟢 Renderizar el Logo con el manejador de clic
+# 🟢 Renderizar el Logo (Estático)
 LOGO_URL = "https://i.imgur.com/4WKV5rd.png"
 LOGO_HTML = f"""
-<div class="custom-logo-container" onclick="toggleSidebar()">
+<div class="custom-logo-container">
     <img src="{LOGO_URL}" alt="ZEXFLIX Logo">
 </div>
 """
 st.markdown(LOGO_HTML, unsafe_allow_html=True) 
 
-# --- LÓGICA DE NAVIGACIÓN POR URL (REESTRUCTURADA) ---
+# --- LÓGICA DE NAVIGACIÓN POR URL ---
 
 # 1. Leer los parámetros de la URL
 query_params = st.query_params
@@ -193,7 +160,7 @@ def show_detail_page(df, selected_index):
     except KeyError:
         st.error("Error: Ítem no encontrado.")
         go_to_catalog()
-        st.rerun() # Usamos st.rerun() aquí para forzar la actualización después de un error (KeyError)
+        st.rerun() 
         return
 
     st.button("⬅️ Volver al Catálogo", on_click=go_to_catalog)
@@ -263,7 +230,6 @@ def show_detail_page(df, selected_index):
     st.markdown("---")
 
 # Función de sanitización de texto para la búsqueda
-# Reemplaza cualquier carácter que no sea alfanumérico o espacio con un espacio
 def clean_text_for_search(text):
     if pd.isna(text):
         return ""
@@ -370,32 +336,29 @@ def show_catalog(df):
     # Aplicar paginación al DataFrame
     df_paginated = df_display.iloc[start_idx:end_idx]
 
-    # --- 6. Título con recuento y Paginación (Superior) ---
-    col_count, col_nav_top = st.columns([3, 1])
-
-    with col_count:
-        st.subheader(f"Catálogo: {total_items} películas encontradas")
-    
-    # Muestra el indicador de página solo si hay más de una página
-    if total_pages > 1:
-        with col_nav_top:
-            st.markdown(f"<p style='text-align: right; margin: 0; padding-top: 15px;'>Página {current_page} de {total_pages}</p>", unsafe_allow_html=True)
+    # --- 6. Título con recuento ---
+    st.subheader(f"Catálogo: {total_items} películas encontradas")
             
-    # --- 7. Navegación Superior (Botones) ---
+    # --- 7. Navegación Superior (Centrada en una línea) ---
     if total_pages > 1:
-        nav_cols_top = st.columns(2)
-        
+        # Usamos 3 columnas para alinear los botones a los lados y el texto en el centro
+        nav_cols_top = st.columns([1, 1, 1])
+
         with nav_cols_top[0]:
-            if st.button("<< Anterior", key="nav_prev_top", disabled=(current_page == 1)):
+            if st.button("<< Anterior", key="nav_prev_top", disabled=(current_page == 1), use_container_width=True):
                 st.session_state['current_page'] -= 1
                 st.rerun()
-
+        
         with nav_cols_top[1]:
-            if st.button("Siguiente >>", key="nav_next_top", disabled=(current_page == total_pages)):
+            # Centrarmos la información de la página usando HTML
+            st.markdown(f"<p style='text-align: center; margin: 0; padding-top: 10px; font-weight: bold;'>Página {current_page} de {total_pages}</p>", unsafe_allow_html=True)
+
+        with nav_cols_top[2]:
+            if st.button("Siguiente >>", key="nav_next_top", disabled=(current_page == total_pages), use_container_width=True):
                 st.session_state['current_page'] += 1
                 st.rerun()
 
-    # --- CSS GLOBAL Y GRID RESPONSIVO ---
+    # --- CSS GLOBAL Y GRID RESPONSIVO (se mantiene el CSS de las tarjetas) ---
     st.markdown("""
     <style>
         .catalog-grid {
@@ -525,21 +488,24 @@ def show_catalog(df):
     st.markdown(f'<div class="catalog-grid">{cards_html}</div>', unsafe_allow_html=True)
 
 
-    # --- 8. Navegación Inferior (Botones) ---
+    # --- 8. Navegación Inferior (Centrada en una línea) ---
     if total_pages > 1:
         st.markdown("---")
-        nav_cols_bottom = st.columns([1, 2, 1])
+        # Usamos 3 columnas para alinear los botones a los lados y el texto en el centro
+        nav_cols_bottom = st.columns([1, 1, 1])
         
         with nav_cols_bottom[0]:
-            if st.button("<< Anterior", key="nav_prev_bottom", disabled=(current_page == 1)):
+            if st.button("<< Anterior", key="nav_prev_bottom", disabled=(current_page == 1), use_container_width=True):
                 st.session_state['current_page'] -= 1
                 st.rerun()
 
         with nav_cols_bottom[1]:
-            st.markdown(f"<p style='text-align: center; margin: 0; padding-top: 10px;'>Página {current_page} de {total_pages}</p>", unsafe_allow_html=True)
+            # Centrarmos la información de la página usando HTML
+            st.markdown(f"<p style='text-align: center; margin: 0; padding-top: 10px; font-weight: bold;'>Página {current_page} de {total_pages}</p>", unsafe_allow_html=True)
+
 
         with nav_cols_bottom[2]:
-            if st.button("Siguiente >>", key="nav_next_bottom", disabled=(current_page == total_pages)):
+            if st.button("Siguiente >>", key="nav_next_bottom", disabled=(current_page == total_pages), use_container_width=True):
                 st.session_state['current_page'] += 1
                 st.rerun()
                 
