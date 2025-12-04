@@ -15,10 +15,11 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS y JS para Responsive, Ocultar Toolbar y LOGO CLICKEABLE ---
+# --- CSS para Responsive, Ocultar Toolbar y LOGO CLICKEABLE ---
 st.markdown("""
 <style>
 /* 1. OCULTAR LA BARRA DE HERRAMIENTAS SUPERIOR (TOOLBAR/HEADER) */
+/* Ocultamos el header para eliminar el menú de tres puntos y el espacio superior */
 header {
     visibility: hidden;
     height: 0px !important;
@@ -37,7 +38,6 @@ header {
 }
 
 /* 4. AJUSTE DE LA IMAGEN DEL LOGO PARA SER RESPONSIVA Y CLICKEABLE */
-/* El logo ahora está dentro de un contenedor .custom-logo-container */
 .custom-logo-container {
     cursor: pointer; /* Indica que es interactivo */
     margin-bottom: 15px; /* Margen inferior */
@@ -45,11 +45,11 @@ header {
 }
 
 .custom-logo-container img {
-    max-width: 100%; /* El ancho máximo es el 100% de la columna (responsive) */
-    height: auto;    /* Mantiene la proporción */
+    max-width: 100%; 
+    height: auto;    
     max-height: 80px; /* Altura máxima para pantallas grandes */
-    width: auto;     /* Permite que se ajuste */
-    display: block;  /* Necesario para centrar la imagen */
+    width: auto;     
+    display: block;  
     margin-left: auto;
     margin-right: auto;
 }
@@ -59,27 +59,10 @@ header {
         max-height: 60px; /* Reducir ligeramente en móvil */
     }
 }
-
-/* Ajuste opcional para botones en móviles si es necesario */
-div.stButton > button {
-    width: 100%;
-}
 </style>
-
-<script>
-    // Función JavaScript que simula el clic en el botón de colapsar/expandir el sidebar
-    function toggleSidebar() {
-      // Streamlit utiliza este data-testid para el botón de la barra lateral (hamburguesa)
-      const sidebarToggle = document.querySelector('[data-testid="stSidebarCollapse"]');
-      if (sidebarToggle) {
-        sidebarToggle.click(); // Simular clic
-      }
-    }
-</script>
 """, unsafe_allow_html=True)
-# --- FIN CSS y JS ---
 
-# 🟢 REEMPLAZO DE st.image por st.markdown con HTML y JS
+# 🟢 1. Renderizar el Logo con el manejador de clic
 LOGO_URL = "https://i.imgur.com/4WKV5rd.png"
 LOGO_HTML = f"""
 <div class="custom-logo-container" onclick="toggleSidebar()">
@@ -87,6 +70,23 @@ LOGO_HTML = f"""
 </div>
 """
 st.markdown(LOGO_HTML, unsafe_allow_html=True) 
+
+# 🟢 2. INYECTAR EL CÓDIGO JAVASCRIPT POR SEPARADO (Mejor para evitar problemas de timing)
+st.markdown("""
+<script>
+    // Función JavaScript que simula el clic en el botón de colapsar/expandir el sidebar
+    function toggleSidebar() {
+      // Usamos el selector oficial de Streamlit.
+      const sidebarToggle = document.querySelector('[data-testid="stSidebarCollapse"]');
+      if (sidebarToggle) {
+        // Ejecutar el clic. Si el botón está oculto con 'visibility: hidden',
+        // el navegador aún debe procesar el evento.
+        sidebarToggle.click(); 
+      }
+    }
+</script>
+""", unsafe_allow_html=True)
+# --- FIN CSS y JS ---
 
 # --- LÓGICA DE NAVIGACIÓN POR URL (REESTRUCTURADA) ---
 
@@ -166,10 +166,6 @@ df = load_data()
 # ----------------------------------------------------
 # 🟢 FUNCIONES DE VISTAS
 # ----------------------------------------------------
-
-# Nota: Si el usuario desea que el logo también resetee el catálogo (ir a la página 1),
-# podría envolver el LOGO_HTML en un hipervínculo que apunte a la URL base (`/`).
-# Por ahora, solo abrimos el sidebar según lo solicitado.
 
 def get_youtube_id(url):
     if not url: return None
@@ -372,8 +368,6 @@ def show_catalog(df):
             
     # --- 7. Navegación Superior (Botones) ---
     if total_pages > 1:
-        # 🟢 CAMBIO: Usamos solo 2 columnas (50% cada una) para que en móvil quepan lado a lado
-        # Antes era [1, 10, 1] lo que colapsaba en móvil.
         nav_cols_top = st.columns(2)
         
         with nav_cols_top[0]:
@@ -382,8 +376,6 @@ def show_catalog(df):
                 st.rerun()
 
         with nav_cols_top[1]:
-            # Nota: Al no haber espaciador central, el botón "Siguiente" estará pegado a la mitad, 
-            # pero alineado a la izquierda de su columna. Esto asegura que estén en la misma línea.
             if st.button("Siguiente >>", key="nav_next_top", disabled=(current_page == total_pages)):
                 st.session_state['current_page'] += 1
                 st.rerun()
@@ -523,8 +515,6 @@ def show_catalog(df):
     # --- 8. Navegación Inferior (Botones) ---
     if total_pages > 1:
         st.markdown("---")
-        # 🟢 CAMBIO: Reducimos el espacio central ([1, 2, 1] en vez de [1, 10, 1])
-        # Esto permite que las columnas laterales sean más anchas y los botones quepan sin apilarse.
         nav_cols_bottom = st.columns([1, 2, 1])
         
         with nav_cols_bottom[0]:
