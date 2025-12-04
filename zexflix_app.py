@@ -339,22 +339,25 @@ def show_catalog(df):
     # --- 6. Título con recuento ---
     st.subheader(f"Catálogo: {total_items} películas encontradas")
             
-    # --- 7. Navegación Superior (Centrada en una línea) ---
+    # --- 7. Navegación Superior (Centrada y Simplificada) ---
     if total_pages > 1:
         # Usamos 3 columnas para alinear los botones a los lados y el texto en el centro
+        # Nota: quitamos use_container_width=True para que los botones se centren en sus columnas sin estirarse
         nav_cols_top = st.columns([1, 1, 1])
 
         with nav_cols_top[0]:
-            if st.button("<< Anterior", key="nav_prev_top", disabled=(current_page == 1), use_container_width=True):
+            # Botón "Anterior" simplificado
+            if st.button("<", key="nav_prev_top", disabled=(current_page == 1)):
                 st.session_state['current_page'] -= 1
                 st.rerun()
         
         with nav_cols_top[1]:
-            # Centrarmos la información de la página usando HTML
-            st.markdown(f"<p style='text-align: center; margin: 0; padding-top: 10px; font-weight: bold;'>Página {current_page} de {total_pages}</p>", unsafe_allow_html=True)
+            # Texto centrado (solo X de Y)
+            st.markdown(f"<p style='text-align: center; margin: 0; padding-top: 10px; font-weight: bold;'>{current_page} de {total_pages}</p>", unsafe_allow_html=True)
 
         with nav_cols_top[2]:
-            if st.button("Siguiente >>", key="nav_next_top", disabled=(current_page == total_pages), use_container_width=True):
+            # Botón "Siguiente" simplificado
+            if st.button(">", key="nav_next_top", disabled=(current_page == total_pages)):
                 st.session_state['current_page'] += 1
                 st.rerun()
 
@@ -488,24 +491,27 @@ def show_catalog(df):
     st.markdown(f'<div class="catalog-grid">{cards_html}</div>', unsafe_allow_html=True)
 
 
-    # --- 8. Navegación Inferior (Centrada en una línea) ---
+    # --- 8. Navegación Inferior (Centrada y Simplificada) ---
     if total_pages > 1:
         st.markdown("---")
         # Usamos 3 columnas para alinear los botones a los lados y el texto en el centro
+        # Nota: quitamos use_container_width=True para que los botones se centren en sus columnas sin estirarse
         nav_cols_bottom = st.columns([1, 1, 1])
         
         with nav_cols_bottom[0]:
-            if st.button("<< Anterior", key="nav_prev_bottom", disabled=(current_page == 1), use_container_width=True):
+            # Botón "Anterior" simplificado
+            if st.button("<", key="nav_prev_bottom", disabled=(current_page == 1)):
                 st.session_state['current_page'] -= 1
                 st.rerun()
 
         with nav_cols_bottom[1]:
-            # Centrarmos la información de la página usando HTML
-            st.markdown(f"<p style='text-align: center; margin: 0; padding-top: 10px; font-weight: bold;'>Página {current_page} de {total_pages}</p>", unsafe_allow_html=True)
+            # Texto centrado (solo X de Y)
+            st.markdown(f"<p style='text-align: center; margin: 0; padding-top: 10px; font-weight: bold;'>{current_page} de {total_pages}</p>", unsafe_allow_html=True)
 
 
         with nav_cols_bottom[2]:
-            if st.button("Siguiente >>", key="nav_next_bottom", disabled=(current_page == total_pages), use_container_width=True):
+            # Botón "Siguiente" simplificado
+            if st.button(">", key="nav_next_bottom", disabled=(current_page == total_pages)):
                 st.session_state['current_page'] += 1
                 st.rerun()
                 
